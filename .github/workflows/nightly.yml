@@ -19,7 +19,7 @@ jobs:
     timeout-minutes: 25
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: recursive
 
@@ -70,7 +70,7 @@ jobs:
           sha256sum json-gl-xr-aarch64.AppImage \
             | tee json-gl-xr-aarch64.AppImage.sha256
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: json-gl-xr-aarch64-${{ github.run_id }}
           path: dist/json-gl-xr-aarch64.AppImage*

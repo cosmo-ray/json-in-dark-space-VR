@@ -56,23 +56,10 @@ Categories=Development;Graphics;
 Terminal=true
 EOF
 
-cat > "$APPDIR/json-gl-xr.svg" <<'EOF'
-<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
-  <rect width="128" height="128" rx="20" fill="#0a0c14"/>
-  <g stroke="#e8e8ff" stroke-width="3" fill="none" opacity="0.8">
-    <path d="M64 64 L40 34 M64 64 L88 34 M64 64 L28 74 M64 64 L100 74 M64 64 L52 100 M64 64 L76 100"/>
-  </g>
-  <rect x="52" y="52" width="24" height="24" fill="#ff3030"/>
-  <rect x="31" y="25" width="18" height="18" fill="#30ff30"/>
-  <rect x="79" y="25" width="18" height="18" fill="#3030ff"/>
-  <rect x="19" y="65" width="18" height="18" fill="#ffff30"/>
-  <rect x="91" y="65" width="18" height="18" fill="#ff30ff"/>
-  <rect x="43" y="91" width="18" height="18" fill="#30ffff"/>
-  <rect x="67" y="91" width="18" height="18" fill="#ff8030"/>
-</svg>
-EOF
-cp "$APPDIR/json-gl-xr.svg" "$APPDIR/.DirIcon"
+# the icon lives in packaging/ as an svg plus the 256x256 png that appimagetool
+# wants for .DirIcon (it derives the symlink itself from the png)
+cp packaging/json-gl-xr.svg "$APPDIR/json-gl-xr.svg"
+cp packaging/json-gl-xr.png "$APPDIR/json-gl-xr.png"
 
 # appimagetool itself: pinned to the continuous aarch64 build.
 TOOL=build/appimagetool-aarch64.AppImage
