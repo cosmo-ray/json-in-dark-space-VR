@@ -94,6 +94,20 @@ Copy it to the devkit and run it. If the runtime does not expose
 on Linux is Vulkan-first, so GLES support is the known risk here — that is what
 the compile-time backend switch exists for.
 
+## Files
+
+| path              | what                                              |
+| ----------------- | ------------------------------------------------- |
+| `gl-cube-2.c`     | legacy GLUT front-end                             |
+| `vr.c`            | OpenXR / GLES front-end                           |
+| `json_layout.h`   | layout, cube mesh and picking shared by both      |
+| `third_party/`    | submodules: yyjson, stb, csonpath                |
+| `.gitmodules`     | HTTPS urls; each dependency is pinned by commit   |
+| `packaging/`      | arm64 build image and AppImage script             |
+| `example.json`    | sample data (36 elements)                         |
+
+Build products (`json-gl`, `json-gl-xr`, `build/`, `dist/`) are ignored.
+
 ## Layout
 
 Element `i` becomes a cube at coordinates derived from the bits of the index
