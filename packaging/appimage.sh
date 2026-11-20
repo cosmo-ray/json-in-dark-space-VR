@@ -24,16 +24,8 @@ cp "$BIN" "$APPDIR/usr/bin/$BIN"
 # Bundle everything the binary needs except the things that must come from
 # the host: the C library, the dynamic loader, and the GL/EGL dispatch layer
 # (libglvnd + Mesa drivers are provided by SteamOS).
-EXCLUDE='^(ld-linux|libc\.so|libm\.so|libpthread\.so|libdl\.so|librt\.so|libresolv\.so|libanl\.so|libnss_|libgcc_s\.so|libstdc\+\+\.so|libEGL|libGLESv2|libGLdispatch|libGLX|libOpenGL|libgbm|libdrm|libwayland|libX11|libxcb)'
 
-ldd "$BIN" | awk '/=> \// { print $3 }' | while read -r lib; do
-    base=$(basename "$lib")
-    if [[ "$base" =~ $EXCLUDE ]]; then
-        continue
-    fi
-    cp -L "$lib" "$APPDIR/usr/lib/$base"
-done
-
+cp -vL $( ldd $BIN | grep '=>' | cut -d ' ' -f 3 | grep -v  -e libm.so  -e libc.so -e libstdc++.so -e libdl.so.2 -e ld-linux-x86-64.so.2 -e libpthread.so.0 -e librt.so -e lib*GL* -e libXau -e libxcb -e libX11 -e libXext -e libOpenGL.so -e linux-vdso -e libXdmcp -e libwaylan  ) "$APPDIR/usr/lib/"
 
 echo "bundled:"
 ls "$APPDIR/usr/lib" | sed 's/^/  /'
