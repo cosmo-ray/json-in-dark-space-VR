@@ -99,10 +99,10 @@ Copy it to the devkit and run it. If the runtime does not expose
 on Linux is Vulkan-first, so GLES support is the known risk here — that is what
 the compile-time backend switch exists for.
 
-Every night at 03:17 UTC `.github/workflows/nightly.yml` rebuilds the AppImage
-from `main` on an arm64 runner, runs it under Xvfb and replaces the rolling
-`nightly` pre-release of this repository with the fresh binary and its
-`sha256`, so `/releases/tag/nightly` is always up to date.
+Every push is built by `.github/workflows/nightly.yml` on an arm64 runner and
+the AppImage is run under Xvfb. Pushes to `main` replace the rolling `nightly`
+pre-release of this repository with the fresh binary and its `sha256`, so
+`/releases/tag/nightly` always matches the last commit.
 
 ## Files
 
