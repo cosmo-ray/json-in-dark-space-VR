@@ -1,5 +1,7 @@
 # JSON in dark space
 
+[![nightly](https://github.com/cosmo-ray/json-in-dark-space-VR/actions/workflows/nightly.yml/badge.svg)](https://github.com/cosmo-ray/json-in-dark-space-VR/actions/workflows/nightly.yml)
+
 Walk a JSON array as a 3D graph: one cube per element, laid out by
 bit-interleaving the index on three axes. A ray from your hand picks a node and
 a floating panel shows its csonpath, type and value.
@@ -100,9 +102,10 @@ on Linux is Vulkan-first, so GLES support is the known risk here — that is wha
 the compile-time backend switch exists for.
 
 Every push is built by `.github/workflows/nightly.yml` on an arm64 runner and
-the AppImage is run under Xvfb. Pushes to `main` replace the rolling `nightly`
-pre-release of this repository with the fresh binary and its `sha256`, so
-`/releases/tag/nightly` always matches the last commit.
+the AppImage is run under Xvfb. Pushes to `main` replace the
+[rolling `nightly` pre-release](https://github.com/cosmo-ray/json-in-dark-space-VR/releases/tag/nightly)
+with the fresh binary and its `sha256`, so that page and its asset URLs always
+match the last commit.
 
 ## Files
 
