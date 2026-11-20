@@ -1,11 +1,12 @@
 #define GL_SILENCE_DEPRECATION
 #include <stdlib.h>
-#include <string.h> // for memcpy
+#include <string.h> // for strcmp
 #include <stdio.h>
 #include <math.h>
 #include <OpenGL/gl.h>
 #include <GLUT/glut.h>
 #include "csonpath_json-c.h"
+#include "json_layout.h"
 
 #define WIN_X 800
 #define WIN_Y 600
@@ -19,35 +20,6 @@ static struct json_object *cur_json;
 
 // 8 cube corners relative to (cx,cy,cz) will be computed
 GLfloat vertices[8][3];
-GLfloat colors[8][3] = {
-    {1,0,0}, {0,1,0}, {0,0,1}, {1,1,0},
-    {1,0,1}, {0,1,1}, {1,1,1}, {0.5,0.5,0.5}
-};
-
-GLfloat normals[24][3] = {
-    // +Z front
-    {0,0,1}, {0,0,1}, {0,0,1}, {0,0,1},
-    // -Z back
-    {0,0,-1}, {0,0,-1}, {0,0,-1}, {0,0,-1},
-    // +X right
-    {1,0,0}, {1,0,0}, {1,0,0}, {1,0,0},
-    // -X left
-    {-1,0,0}, {-1,0,0}, {-1,0,0}, {-1,0,0},
-    // +Y top
-    {0,1,0}, {0,1,0}, {0,1,0}, {0,1,0},
-    // -Y bottom
-    {0,-1,0}, {0,-1,0}, {0,-1,0}, {0,-1,0}
-};
-
-// indices for 6 faces (each has 4 vertices = quad)
-GLubyte indices[6][4] = {
-    {0,1,2,3}, // front
-    {4,5,6,7}, // back
-    {0,3,7,4}, // left
-    {1,5,6,2}, // right
-    {3,2,6,7}, // top
-    {0,1,5,4}  // bottom
-};
 
 // selection: store selected cube center; use an impossible initial value
 int selected_exists = 0;
@@ -57,28 +29,6 @@ float selected_cx =0.0f, selected_cy = 0.0f, selected_cz = 0.0f;
 static int frameCount = 0;
 static float fps = 0.0f;
 static int previousTime = 0;
-
-void buildCube_(void *dst, size_t s, float cx, float cy, float cz, float size)
-{
-    float hs = size * 0.5f;
-
-    // cube corners
-    memcpy(dst, (GLfloat[8][3]){
-        {cx-hs, cy-hs, cz+hs}, // 0 front-lower-left
-        {cx+hs, cy-hs, cz+hs}, // 1 front-lower-right
-        {cx+hs, cy+hs, cz+hs}, // 2 front-upper-right
-        {cx-hs, cy+hs, cz+hs}, // 3 front-upper-left
-        {cx-hs, cy-hs, cz-hs}, // 4 back-lower-left
-        {cx+hs, cy-hs, cz-hs}, // 5 back-lower-right
-        {cx+hs, cy+hs, cz-hs}, // 6 back-upper-right
-        {cx-hs, cy+hs, cz-hs}  // 7 back-upper-left
-      }, s);
-}
-
-void buildCube(float cx, float cy, float cz, float size)
-{
-    buildCube_(vertices, sizeof(vertices), cx, cy, cz, size);
-}
 
 void drawLine(float cx0, float cy0, float cz0,
 	      float cx1, float cy1, float cz1)
@@ -91,43 +41,36 @@ void drawLine(float cx0, float cy0, float cz0,
 
 void drawCubeAt(float cx, float cy, float cz, float size)
 {
-    buildCube(cx, cy, cz, size);
+    jl_box_corners(vertices, cx, cy, cz, size);
 
     glEnableClientState(GL_VERTEX_ARRAY);
-    //glEnableClientState(GL_COLOR_ARRAY);
-    glEnableClientState(GL_NORMAL_ARRAY);
-
     glVertexPointer(3, GL_FLOAT, 0, vertices);
-    glNormalPointer(GL_FLOAT, 0, normals);
-    //glColorPointer(3, GL_FLOAT, 0, colors);
 
     for (int i = 0; i < 6; i++) {
-	glColor3fv(colors[i]);
-	glDrawElements(GL_QUADS, 4, GL_UNSIGNED_BYTE, indices[i]);
+	glNormal3fv(jl_normals[i]);
+	glColor3fv(jl_colors[i]);
+	glDrawElements(GL_QUADS, 4, GL_UNSIGNED_BYTE, jl_faces[i]);
     }
 
-    glDisableClientState(GL_COLOR_ARRAY);
     glDisableClientState(GL_VERTEX_ARRAY);
-    glDisableClientState(GL_NORMAL_ARRAY);
 }
 
 
 // helper to draw a wireframe box around selected cube
 void drawWireAABB(float cx, float cy, float cz, float size)
 {
-    float hs = size * 0.5f;
     // 8 corners (same orientation as vertices)
     GLfloat v[8][3];
-    buildCube_(v, sizeof(vertices), cx, cy, cz, size);
+    jl_box_corners(v, cx, cy, cz, size);
     glPushAttrib(GL_ENABLE_BIT | GL_POLYGON_BIT | GL_CURRENT_BIT);    glColor3f(1.0f, 1.0f, 1.0f);
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     glBegin(GL_QUADS);
       // draw slightly inset quads so lines are visible
       for (int i=0;i<6;i++) {
-        glVertex3fv(v[indices[i][0]]);
-        glVertex3fv(v[indices[i][1]]);
-        glVertex3fv(v[indices[i][2]]);
-        glVertex3fv(v[indices[i][3]]);
+        glVertex3fv(v[jl_faces[i][0]]);
+        glVertex3fv(v[jl_faces[i][1]]);
+        glVertex3fv(v[jl_faces[i][2]]);
+        glVertex3fv(v[jl_faces[i][3]]);
       }
     glEnd();
     // restore polygon mode etc.
@@ -154,29 +97,22 @@ void renderBitmapString(float x, float y, void *font, const char *string)
     }
 }
 
+struct walk_thunk {
+    void (*f)(float, float, float, void *);
+    void *data;
+};
+
+static void walk_thunk_cb(uint32_t idx, float x, float y, float z, void *ud)
+{
+    struct walk_thunk *t = ud;
+    (void)idx;
+    t->f(x, y, z, t->data);
+}
+
 void do_json(json_object *cur, void (*f)(float, float, float, void *), void *data)
 {
-    int last_node = json_object_array_length(cur);
-    for (unsigned int count_nodes = 1; count_nodes <= last_node; ++count_nodes) {
-      int x_mask = count_nodes & 3;
-      int y_mask = count_nodes & 0xc;
-      int z_mask = count_nodes & 0x30;
-      unsigned int mult_mask = count_nodes >> 6;
-      float x =  x_mask == 1 ? -1 : x_mask == 2 ? 1 : 0;
-      float y = y_mask == 4 ? -1 : y_mask == 8 ? 1 : 0;
-      float z = z_mask == 0x10 ? -1 : z_mask == 0x20 ? 1 : 0;
-      while (mult_mask) {
-	x *= 2;
-	y *= 2;
-	z *= 2;
-	mult_mask = mult_mask >> 1;
-      }
-      if (x == 0 && y == 0 && z == 0) {
-	++last_node;
-	continue;
-      }
-      f(x,y,z,data);
-    }
+    struct walk_thunk t = { f, data };
+    jl_walk(json_object_array_length(cur), walk_thunk_cb, &t);
 }
 
 void display_json_(float x, float y, float z, void *data)
@@ -253,54 +189,24 @@ void reshape(int w, int h)
     glLoadIdentity();
 }
 
-// Ray - AABB intersection: returns 1 if hit and sets *tNear to entry distance along ray (>=0).
-// Ray: origin + t * dir  (dir must be non-zero, not necessarily normalized).
-static int rayBoxIntersect(const double origin[3], const double dir[3],
-                    const double boxMin[3], const double boxMax[3],
-                    double *tNearOut)
-{
-    // slab method
-    double tmin = -INFINITY;
-    double tmax =  INFINITY;
-
-    for (int i = 0; i < 3; ++i) {
-        if (fabs(dir[i]) < 1e-9) {
-            // ray parallel to slab: no hit if origin not within slab
-            if (origin[i] < boxMin[i] || origin[i] > boxMax[i]) return 0;
-        } else {
-            double ood = 1.0 / dir[i];
-            double t1 = (boxMin[i] - origin[i]) * ood;
-            double t2 = (boxMax[i] - origin[i]) * ood;
-            if (t1 > t2) { double tmp = t1; t1 = t2; t2 = tmp; }
-            if (t1 > tmin) tmin = t1;
-            if (t2 < tmax) tmax = t2;
-            if (tmin > tmax) return 0;
-            if (tmax < 0) return 0; // box is behind ray
-        }
-    }
-    if (tNearOut) *tNearOut = tmin >= 0.0 ? tmin : tmax;
-    return 1;
-}
-
 struct col_data {
     float hitX, hitY, hitZ, hitSize;
-    double bestT;
+    float bestT;
     int hit;
-    double origin[3];
-    double dir[3];
+    float origin[3];
+    float dir[3];
 
 };
 
 void do_col(float cx, float cy, float cz, void *data) {
-    // skip the origin cube center? your code draws center too; keep it
     struct col_data *c = data;
-    float size = ( (cx==0 && cy==0 && cz==0) ? 1.0f : 0.4f ); // match display size
-    double hs = 0.5 * size;
-    double boxMin[3] = {cx - hs, cy - hs, cz - hs};
-    double boxMax[3] = {cx + hs, cy + hs, cz + hs};
-    double tNear;
-    if (rayBoxIntersect(c->origin, c->dir, boxMin, boxMax, &tNear)) {
-	if (tNear >= 0.0 && tNear < c->bestT) {
+    float size = JL_NODE_SIZE;           // match display size
+    float hs = 0.5f * size;
+    float boxMin[3] = {cx - hs, cy - hs, cz - hs};
+    float boxMax[3] = {cx + hs, cy + hs, cz + hs};
+    float tNear;
+    if (jl_ray_box(c->origin, c->dir, boxMin, boxMax, &tNear)) {
+	if (tNear >= 0.0f && tNear < c->bestT) {
 	    c->bestT = tNear;
 	    c->hit = 1;
 	    c->hitX = cx; c->hitY = cy; c->hitZ = cz; c->hitSize = size;
@@ -339,12 +245,12 @@ void mouseCallback(int button, int state, int x, int y)
     // iterate the same set of cubes you draw: center positions x,y,z in {-1,0,1}
     struct col_data cdata = {
 	.bestT = INFINITY,
-	.origin={nearX, nearY, nearZ},
-	.dir={ farX - nearX, farY - nearY, farZ - nearZ }
+	.origin={ (float)nearX, (float)nearY, (float)nearZ },
+	.dir={ (float)(farX - nearX), (float)(farY - nearY), (float)(farZ - nearZ) }
     };
     // optionally normalize dir for more stable t values
-    double len = sqrt(cdata.dir[0]*cdata.dir[0] + cdata.dir[1]*cdata.dir[1] + cdata.dir[2]*cdata.dir[2]);
-    if (len > 1e-12) { cdata.dir[0] /= len; cdata.dir[1] /= len; cdata.dir[2] /= len; }
+    float len = sqrtf(cdata.dir[0]*cdata.dir[0] + cdata.dir[1]*cdata.dir[1] + cdata.dir[2]*cdata.dir[2]);
+    if (len > 1e-12f) { cdata.dir[0] /= len; cdata.dir[1] /= len; cdata.dir[2] /= len; }
 
     json_object *cur = cur_json;
 
@@ -403,20 +309,31 @@ void idle()
 
 int main(int argc, char** argv)
 {
-    // load json from stdin
+    // load json from stdin, or from --in-file
     char *main_path = NULL;
     char *in_file = NULL;
 
     for (int i = 1; i < argc; ++i) {
-	if (!strcmp(argv[i], "--main-path")) {
+	if (!strcmp(argv[i], "--main-path") && i + 1 < argc) {
 	    main_path = argv[++i];
-	} else if (!strcmp(argv[i], "--in-file")) {
+	} else if (!strcmp(argv[i], "--in-file") && i + 1 < argc) {
 	    in_file = argv[++i];
 	}
     }
-    main_json = json_object_from_fd(0);
+
+    int in_fd = 0;
+    if (in_file) {
+	FILE *f = fopen(in_file, "rb");
+	if (!f) {
+	    perror(in_file);
+	    return 1;
+	}
+	in_fd = fileno(f);
+    }
+    main_json = json_object_from_fd(in_fd);
     if (!main_json) {
-	fprintf(stderr, "fail to create json from stdin\n");
+	fprintf(stderr, "fail to create json from %s\n",
+		in_file ? in_file : "stdin");
 	return 1;
     }
 
