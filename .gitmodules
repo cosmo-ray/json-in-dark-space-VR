@@ -1,0 +1,9 @@
+[submodule "yyjson"]
+	path = third_party/yyjson
+	url = https://github.com/ibireme/yyjson.git
+[submodule "stb"]
+	path = third_party/stb
+	url = https://github.com/nothings/stb.git
+[submodule "csonpath"]
+	path = third_party/csonpath
+	url = https://github.com/outscale/csonpath.git

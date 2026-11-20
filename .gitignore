@@ -1,0 +1,10 @@
+# build output
+json-gl
+json-gl-xr
+json-gl.dSYM/
+build/
+dist/
+
+# editor / macOS noise
+*~
+.DS_Store

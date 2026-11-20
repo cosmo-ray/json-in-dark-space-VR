@@ -1,0 +1,284 @@
+[
+  {
+    "id": 0,
+    "module": "core",
+    "online": false,
+    "mass_kg": 1200,
+    "tags": [
+      "critical",
+      "pressurized"
+    ],
+    "parent": {
+      "id": 0,
+      "module": "hab"
+    },
+    "note": null,
+    "temp_c": -12.5
+  },
+  {
+    "id": 1,
+    "module": "hab",
+    "online": true,
+    "mass_kg": 1237
+  },
+  {
+    "id": 2,
+    "module": "lab",
+    "online": true,
+    "mass_kg": 1274
+  },
+  {
+    "id": 3,
+    "module": "dock",
+    "online": true,
+    "mass_kg": 1311
+  },
+  {
+    "id": 4,
+    "module": "solar",
+    "online": false,
+    "mass_kg": 1348
+  },
+  {
+    "id": 5,
+    "module": "radiator",
+    "online": true,
+    "mass_kg": 1385,
+    "tags": [
+      "critical",
+      "pressurized"
+    ]
+  },
+  {
+    "id": 6,
+    "module": "antenna",
+    "online": true,
+    "mass_kg": 1422,
+    "temp_c": -11.0
+  },
+  {
+    "id": 7,
+    "module": "airlock",
+    "online": true,
+    "mass_kg": 1459,
+    "parent": {
+      "id": 0,
+      "module": "core"
+    }
+  },
+  {
+    "id": 8,
+    "module": "core",
+    "online": false,
+    "mass_kg": 1496
+  },
+  {
+    "id": 9,
+    "module": "hab",
+    "online": true,
+    "mass_kg": 1533,
+    "note": null
+  },
+  {
+    "id": 10,
+    "module": "lab",
+    "online": true,
+    "mass_kg": 1570,
+    "tags": [
+      "critical",
+      "pressurized"
+    ]
+  },
+  {
+    "id": 11,
+    "module": "dock",
+    "online": true,
+    "mass_kg": 1607
+  },
+  {
+    "id": 12,
+    "module": "solar",
+    "online": false,
+    "mass_kg": 1644,
+    "temp_c": -9.5
+  },
+  {
+    "id": 13,
+    "module": "radiator",
+    "online": true,
+    "mass_kg": 1681
+  },
+  {
+    "id": 14,
+    "module": "antenna",
+    "online": true,
+    "mass_kg": 1718,
+    "parent": {
+      "id": 7,
+      "module": "airlock"
+    }
+  },
+  {
+    "id": 15,
+    "module": "airlock",
+    "online": true,
+    "mass_kg": 1755,
+    "tags": [
+      "critical",
+      "pressurized"
+    ]
+  },
+  {
+    "id": 16,
+    "module": "core",
+    "online": false,
+    "mass_kg": 1792
+  },
+  {
+    "id": 17,
+    "module": "hab",
+    "online": true,
+    "mass_kg": 1829
+  },
+  {
+    "id": 18,
+    "module": "lab",
+    "online": true,
+    "mass_kg": 1866,
+    "note": null,
+    "temp_c": -8.0
+  },
+  {
+    "id": 19,
+    "module": "dock",
+    "online": true,
+    "mass_kg": 1903
+  },
+  {
+    "id": 20,
+    "module": "solar",
+    "online": false,
+    "mass_kg": 1940,
+    "tags": [
+      "critical",
+      "pressurized"
+    ]
+  },
+  {
+    "id": 21,
+    "module": "radiator",
+    "online": true,
+    "mass_kg": 1977,
+    "parent": {
+      "id": 14,
+      "module": "antenna"
+    }
+  },
+  {
+    "id": 22,
+    "module": "antenna",
+    "online": true,
+    "mass_kg": 2014
+  },
+  {
+    "id": 23,
+    "module": "airlock",
+    "online": true,
+    "mass_kg": 2051
+  },
+  {
+    "id": 24,
+    "module": "core",
+    "online": false,
+    "mass_kg": 2088,
+    "temp_c": -6.5
+  },
+  {
+    "id": 25,
+    "module": "hab",
+    "online": true,
+    "mass_kg": 2125,
+    "tags": [
+      "critical",
+      "pressurized"
+    ]
+  },
+  {
+    "id": 26,
+    "module": "lab",
+    "online": true,
+    "mass_kg": 2162
+  },
+  {
+    "id": 27,
+    "module": "dock",
+    "online": true,
+    "mass_kg": 2199,
+    "note": null
+  },
+  {
+    "id": 28,
+    "module": "solar",
+    "online": false,
+    "mass_kg": 2236,
+    "parent": {
+      "id": 21,
+      "module": "radiator"
+    }
+  },
+  {
+    "id": 29,
+    "module": "radiator",
+    "online": true,
+    "mass_kg": 2273
+  },
+  {
+    "id": 30,
+    "module": "antenna",
+    "online": true,
+    "mass_kg": 2310,
+    "tags": [
+      "critical",
+      "pressurized"
+    ],
+    "temp_c": -5.0
+  },
+  {
+    "id": 31,
+    "module": "airlock",
+    "online": true,
+    "mass_kg": 2347
+  },
+  {
+    "id": 32,
+    "module": "core",
+    "online": false,
+    "mass_kg": 2384
+  },
+  {
+    "id": 33,
+    "module": "hab",
+    "online": true,
+    "mass_kg": 2421
+  },
+  {
+    "id": 34,
+    "module": "lab",
+    "online": true,
+    "mass_kg": 2458
+  },
+  {
+    "id": 35,
+    "module": "dock",
+    "online": true,
+    "mass_kg": 2495,
+    "tags": [
+      "critical",
+      "pressurized"
+    ],
+    "parent": {
+      "id": 28,
+      "module": "solar"
+    }
+  }
+]
