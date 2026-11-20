@@ -50,19 +50,23 @@ GL/EGL/OpenXR/GLFW come from the distribution, not from the repository.
 
 ### Build (dev machine)
 
-Nothing is built on the headset: it runs the AppImage as-is. On an aarch64
-Linux host with `libglfw3-dev libegl-dev libgles-dev libopenxr-dev`:
+Nothing is built on the headset: it runs the AppImage as-is.
+
+macOS builds the aarch64 target in a colima/Docker container:
+
+```sh
+make appimage          # -> dist/json-gl-xr-aarch64.AppImage
+```
+
+On an aarch64 Linux host (and in CI) build natively instead, with
+`libglfw3-dev libegl-dev libgles-dev libopenxr-dev`:
 
 ```sh
 make vr
+make appimage-native   # same packaging script, no docker
 ```
 
-Cross-checked build in an arm64 container (what CI does):
-
-```sh
-make docker-image     # ubuntu:24.04 + GLES/EGL/OpenXR/GLFW headers
-make vr-linux
-```
+`make docker-image` and `make vr-linux` remain for the container-only case.
 
 ### Run
 
@@ -84,7 +88,8 @@ rotates and scales the graph. `--desktop` uses the mouse instead.
 The AppImage is the deliverable; there is no toolchain on the Steam Frame.
 
 ```sh
-make appimage
+make appimage          # macOS / docker
+make appimage-native   # aarch64 Linux, no docker
 # -> dist/json-gl-xr-aarch64.AppImage
 ```
 
@@ -94,17 +99,23 @@ Copy it to the devkit and run it. If the runtime does not expose
 on Linux is Vulkan-first, so GLES support is the known risk here — that is what
 the compile-time backend switch exists for.
 
+Every night at 03:17 UTC `.github/workflows/nightly.yml` rebuilds the AppImage
+from `main` on an arm64 runner, runs it under Xvfb and replaces the rolling
+`nightly` pre-release of this repository with the fresh binary and its
+`sha256`, so `/releases/tag/nightly` is always up to date.
+
 ## Files
 
-| path              | what                                              |
-| ----------------- | ------------------------------------------------- |
-| `gl-cube-2.c`     | legacy GLUT front-end                             |
-| `vr.c`            | OpenXR / GLES front-end                           |
-| `json_layout.h`   | layout, cube mesh and picking shared by both      |
-| `third_party/`    | submodules: yyjson, stb, csonpath                |
-| `.gitmodules`     | HTTPS urls; each dependency is pinned by commit   |
-| `packaging/`      | arm64 build image and AppImage script             |
-| `example.json`    | sample data (36 elements)                         |
+| path                 | what                                            |
+| -------------------- | ----------------------------------------------- |
+| `gl-cube-2.c`        | legacy GLUT front-end                           |
+| `vr.c`               | OpenXR / GLES front-end                         |
+| `json_layout.h`      | layout, cube mesh and picking shared by both    |
+| `third_party/`       | submodules: yyjson, stb, csonpath               |
+| `.gitmodules`        | HTTPS urls; each dependency is pinned by commit |
+| `packaging/`         | arm64 build image and AppImage script           |
+| `.github/workflows/` | nightly build + rolling `nightly` release       |
+| `example.json`       | sample data (36 elements)                       |
 
 Build products (`json-gl`, `json-gl-xr`, `build/`, `dist/`) are ignored.
 

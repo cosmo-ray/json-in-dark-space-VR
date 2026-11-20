@@ -12,6 +12,12 @@ SUBMODULES := third_party/yyjson/src/yyjson.h \
               third_party/stb/stb_easy_font.h \
               third_party/csonpath/csonpath.h
 
+# ---------------------------------------------------------------------------
+# classic desktop renderer (OpenGL 1.4 + GLUT, macOS) - untouched
+# ---------------------------------------------------------------------------
+json-gl: $(SUBMODULES) gl-cube-2.c json_layout.h
+	$(CC) gl-cube-2.c -O3 -g -Ithird_party/csonpath/ -framework GLUT -framework OpenGL  $(shell pkg-config --cflags json-c) -o json-gl $(shell pkg-config --libs json-c)
+
 deps:
 	git submodule update --init --recursive
 
@@ -19,11 +25,6 @@ $(SUBMODULES):
 	@echo "submodules missing: run 'make deps'" >&2
 	@exit 1
 
-# ---------------------------------------------------------------------------
-# classic desktop renderer (OpenGL 1.4 + GLUT, macOS) - untouched
-# ---------------------------------------------------------------------------
-json-gl: $(SUBMODULES) gl-cube-2.c json_layout.h
-	$(CC) gl-cube-2.c -O3 -g -Ithird_party/csonpath/ -framework GLUT -framework OpenGL  $(shell pkg-config --cflags json-c) -o json-gl $(shell pkg-config --libs json-c)
 
 # ---------------------------------------------------------------------------
 # OpenXR / OpenGL ES 3.2 renderer
@@ -60,10 +61,14 @@ vr-linux: $(VR_DEPS) docker-image
 appimage: vr-linux
 	docker run --rm -v "$(CURDIR)":/src -w /src $(DOCKER_IMG) sh packaging/appimage.sh
 
+# same script, no docker: for an aarch64 Linux host and for CI
+appimage-native: vr
+	sh packaging/appimage.sh
+
 deploy: appimage
 	@echo "copy dist/json-gl-xr-aarch64.AppImage to the Steam Frame (devkit or scp)"
 
 clean:
 	rm -rf json-gl json-gl-xr json-gl.dSYM build/AppDir dist
 
-.PHONY: deps json-gl vr vr-linux docker-image appimage deploy clean
+.PHONY: deps json-gl vr vr-linux docker-image appimage appimage-native deploy clean

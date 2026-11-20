@@ -1,0 +1,112 @@
+name: nightly
+
+on:
+  schedule:
+    - cron: "17 3 * * *"   # 03:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write          # rolling `nightly` release
+
+concurrency:
+  group: nightly
+  cancel-in-progress: true
+
+jobs:
+  appimage:
+    # The AppImage is aarch64: build it natively on an arm64 runner instead of
+    # going through docker/qemu. `make appimage` (docker) stays the macOS path.
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 25
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential pkg-config file curl zlib1g-dev \
+            libglfw3-dev libegl-dev libgles-dev libopenxr-dev \
+            xvfb libgl1-mesa-dri
+
+      - name: build the AppImage
+        run: make appimage-native
+
+      - name: run the AppImage
+        env:
+          LIBGL_ALWAYS_SOFTWARE: "1"
+          APPIMAGE_EXTRACT_AND_RUN: "1"
+        run: |
+          xvfb-run -a -s '-screen 0 1600x600x24' \
+            dist/json-gl-xr-aarch64.AppImage --desktop \
+            --width 1600 --height 600 \
+            --in-file example.json --select 5 --snapshot /tmp/nightly.ppm
+
+      - name: check the snapshot
+        run: |
+          python3 - <<'PY'
+          import sys
+
+          with open("/tmp/nightly.ppm", "rb") as f:
+              data = f.read()
+
+          magic, dims, maxval, px = data.split(b"\n", 3)
+          w, h = map(int, dims.split())
+          if magic != b"P6" or maxval != b"255" or (w, h) != (1600, 600):
+              sys.exit(f"bad snapshot header: {magic!r} {dims!r} {maxval!r}")
+          if len(px) != w * h * 3:
+              sys.exit(f"bad snapshot size: {len(px)} bytes")
+          # a working render has cubes, edges and text; a broken one is a flat fill
+          if len(set(px)) < 4:
+              sys.exit("snapshot is a single colour")
+          print(f"snapshot ok: {w}x{h}, {len(px)} bytes, {len(set(px))} distinct values")
+          PY
+
+      - name: checksum
+        run: |
+          cd dist
+          sha256sum json-gl-xr-aarch64.AppImage \
+            | tee json-gl-xr-aarch64.AppImage.sha256
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: json-gl-xr-aarch64-${{ github.run_id }}
+          path: dist/json-gl-xr-aarch64.AppImage*
+          retention-days: 14
+
+      - name: rolling nightly release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          sha=$(sha256sum dist/json-gl-xr-aarch64.AppImage | cut -d' ' -f1)
+          {
+            echo "Rolling build of \`$(git rev-parse --short HEAD)\` on $(date -u +%F)."
+            echo
+            echo '```'
+            echo "$sha  json-gl-xr-aarch64.AppImage"
+            echo '```'
+            echo
+            echo "Copy the AppImage to the Steam Frame and run it; "
+            echo "see the README for the command line."
+          } > /tmp/notes.md
+
+          # recreate the tag so it always points at the commit that was built,
+          # while the download URLs stay stable
+          if gh release view nightly >/dev/null 2>&1; then
+            gh release delete nightly --yes --cleanup-tag
+          fi
+
+          gh release create nightly \
+            --target "$GITHUB_SHA" \
+            --prerelease \
+            --title nightly \
+            --notes-file /tmp/notes.md
+
+          gh release upload nightly \
+            dist/json-gl-xr-aarch64.AppImage \
+            dist/json-gl-xr-aarch64.AppImage.sha256

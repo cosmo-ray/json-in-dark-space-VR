@@ -7,4 +7,6 @@ dist/
 
 # editor / macOS noise
 *~
+\#*\#
+.\#*
 .DS_Store
