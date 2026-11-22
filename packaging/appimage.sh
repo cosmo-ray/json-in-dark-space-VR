@@ -25,7 +25,7 @@ cp "$BIN" "$APPDIR/usr/bin/$BIN"
 # the host: the C library, the dynamic loader, and the GL/EGL dispatch layer
 # (libglvnd + Mesa drivers are provided by SteamOS).
 
-cp -vL $( ldd $BIN | grep '=>' | cut -d ' ' -f 3 | grep -v  -e libm.so  -e libc.so -e libstdc++.so -e libdl.so.2 -e ld-linux-x86-64.so.2 -e libpthread.so.0 -e librt.so -e lib*GL* -e libXau -e libxcb -e libX11 -e libXext -e libOpenGL.so -e linux-vdso -e libXdmcp -e libwaylan  ) "$APPDIR/usr/lib/"
+cp -vL $( ldd $BIN | grep '=>' | cut -d ' ' -f 3 | grep -v -e 'libm.so' -e 'libc.so' -e 'libstdc++.so' -e 'libdl.so.2' -e 'ld-linux-x86-64.so.2' -e 'libpthread.so.0' -e 'librt.so' -e 'lib*GL*' -e 'libXau' -e 'libxcb' -e 'libX11' -e 'libXext' -e 'libOpenGL.so' -e 'linux-vdso' -e 'libXdmcp' -e 'libwaylan' -e 'libEGL.so' -e 'libbsd.so' -e 'libmd.so' -e 'libdrm.so' -e 'libgbm.so' ) "$APPDIR/usr/lib/"
 
 echo "bundled:"
 ls "$APPDIR/usr/lib" | sed 's/^/  /'
@@ -68,3 +68,31 @@ ARCH=aarch64 "$TOOL" --appimage-extract-and-run --no-appstream "$APPDIR" "$OUT"
 echo
 echo "built: $OUT"
 ls -lh "$OUT"
+
+# Self-extracting installer: the AppImage, the example document and the icon
+# packed behind a small shell header, so the headset only needs one file and
+# no root. Installs under ~/.local (PREFIX=... / --prefix DIR to change it).
+
+STAGE=build/installer
+PAYLOAD=build/payload.tar.gz
+INST=$DIST/json-gl-xr-aarch64-installer.sh
+
+rm -rf "$STAGE" "$PAYLOAD"
+mkdir -p "$STAGE/share/json-gl-xr" "$STAGE/share/icons/hicolor/256x256/apps"
+
+cp "$OUT" "$STAGE/share/json-gl-xr/json-gl-xr.AppImage"
+cp example.json "$STAGE/share/json-gl-xr/example.json"
+cp packaging/json-gl-xr.png "$STAGE/share/icons/hicolor/256x256/apps/json-gl-xr.png"
+
+tar -C "$STAGE" -czf "$PAYLOAD" .
+
+# the header knows on which line the payload starts, so extracting it is just
+# `tail -n +N`
+lines=$(wc -l < packaging/installer.sh.in)
+sed "s/@OFFSET@/$((lines + 1))/" packaging/installer.sh.in > "$INST"
+cat "$PAYLOAD" >> "$INST"
+chmod 755 "$INST"
+
+echo
+echo "built: $INST"
+ls -lh "$INST"

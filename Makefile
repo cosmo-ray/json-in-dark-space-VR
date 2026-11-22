@@ -32,7 +32,7 @@ $(SUBMODULES):
 #   make vr                      native build (needs glfw3, EGL, GLES3, OpenXR)
 #   make vr API=API_VK           same file, Vulkan backend (not implemented)
 #   make vr-linux                aarch64 Linux build inside docker (arm64 native)
-#   make appimage                dist/json-gl-xr-aarch64.AppImage
+#   make appimage                dist/json-gl-xr-aarch64.AppImage (+ installer)
 # ---------------------------------------------------------------------------
 API ?= API_GLES
 XR_BIN := json-gl-xr

@@ -34,15 +34,21 @@ jobs:
       - name: build the AppImage
         run: make appimage-native
 
-      - name: run the AppImage
+      - name: install from the self-extracting installer
+        run: |
+          sh dist/json-gl-xr-aarch64-installer.sh --prefix "$PWD/build/inst"
+          ls -l build/inst/bin build/inst/share/json-gl-xr
+
+      - name: run the installed example
         env:
           LIBGL_ALWAYS_SOFTWARE: "1"
-          APPIMAGE_EXTRACT_AND_RUN: "1"
         run: |
+          # no APPIMAGE_EXTRACT_AND_RUN: the installed wrapper has to work out
+          # by itself that this runner has no usable fuse
           xvfb-run -a -s '-screen 0 1600x600x24' \
-            dist/json-gl-xr-aarch64.AppImage --desktop \
+            build/inst/bin/json-gl-xr-example --desktop \
             --width 1600 --height 600 \
-            --in-file example.json --select 5 --snapshot /tmp/nightly.ppm
+            --select 5 --snapshot /tmp/nightly.ppm
 
       - name: check the snapshot
         run: |
@@ -73,7 +79,10 @@ jobs:
       - uses: actions/upload-artifact@v7
         with:
           name: json-gl-xr-aarch64-${{ github.run_id }}
-          path: dist/json-gl-xr-aarch64.AppImage*
+          path: |
+            dist/json-gl-xr-aarch64.AppImage*
+            dist/json-gl-xr-aarch64-installer.sh
+            example.json
           retention-days: 14
 
       - name: update the nightly release
@@ -91,8 +100,15 @@ jobs:
             echo "$sha  json-gl-xr-aarch64.AppImage"
             echo '```'
             echo
-            echo "Copy the AppImage to the Steam Frame and run it; "
-            echo "see the README for the command line."
+            echo "On the Steam Frame, install it without root:"
+            echo
+            echo '```sh'
+            echo "sh json-gl-xr-aarch64-installer.sh   # -> ~/.local/bin"
+            echo "json-gl-xr-example                   # the bundled example, OpenXR"
+            echo "json-gl-xr-example --desktop         # same, in a window"
+            echo '```'
+            echo
+            echo "Or run the AppImage directly with \`--in-file example.json\`."
           } > /tmp/notes.md
 
           # move the tag to the commit that was just built; the release and its
@@ -112,4 +128,6 @@ jobs:
           gh release upload nightly \
             dist/json-gl-xr-aarch64.AppImage \
             dist/json-gl-xr-aarch64.AppImage.sha256 \
+            dist/json-gl-xr-aarch64-installer.sh \
+            example.json \
             --clobber

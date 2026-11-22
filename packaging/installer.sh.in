@@ -1,0 +1,147 @@
+#!/bin/sh
+# Self-extracting installer for json-gl-xr (Linux aarch64, Steam Frame).
+#
+#   sh json-gl-xr-aarch64-installer.sh                  # installs in ~/.local
+#   sh json-gl-xr-aarch64-installer.sh --prefix DIR     # somewhere else
+#   sh json-gl-xr-aarch64-installer.sh --force          # replace an install
+#   sh json-gl-xr-aarch64-installer.sh --uninstall      # remove it again
+#
+# Nothing needs root: the AppImage, the example document, the icon and two
+# small wrappers all go under --prefix. The payload is the gzipped tar right
+# after this header, so the script is the only file you have to copy around.
+set -eu
+
+PREFIX=${PREFIX:-$HOME/.local}
+FORCE=0
+UNINSTALL=0
+
+usage()
+{
+    cat >&2 <<'EOF'
+usage: sh json-gl-xr-aarch64-installer.sh [--prefix DIR] [--force] [--uninstall]
+
+  --prefix DIR   install under DIR instead of ~/.local
+  --force        replace an existing installation
+  --uninstall    remove the installed files
+EOF
+}
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --prefix)
+            [ $# -ge 2 ] || { echo "--prefix needs a directory" >&2; exit 2; }
+            PREFIX=$2
+            shift 2
+            ;;
+        --prefix=*)
+            PREFIX=${1#--prefix=}
+            shift
+            ;;
+        --force)
+            FORCE=1
+            shift
+            ;;
+        --uninstall)
+            UNINSTALL=1
+            shift
+            ;;
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        *)
+            echo "unknown argument: $1" >&2
+            usage
+            exit 2
+            ;;
+    esac
+done
+
+BIN=$PREFIX/bin
+DATA=$PREFIX/share/json-gl-xr
+DESKTOP=$PREFIX/share/applications/json-gl-xr.desktop
+ICON=$PREFIX/share/icons/hicolor/256x256/apps/json-gl-xr.png
+
+if [ "$UNINSTALL" = 1 ]; then
+    rm -f "$BIN/json-gl-xr" "$BIN/json-gl-xr-example" "$DESKTOP" "$ICON"
+    rm -rf "$DATA"
+    echo "removed json-gl-xr from $PREFIX"
+    exit 0
+fi
+
+if [ -e "$BIN/json-gl-xr" ] && [ "$FORCE" = 0 ]; then
+    echo "$BIN/json-gl-xr already exists; use --force to replace it" >&2
+    exit 1
+fi
+
+mkdir -p "$BIN" "$DATA" "$(dirname "$DESKTOP")" "$(dirname "$ICON")"
+
+# the payload starts on the line after this one
+tail -n +@OFFSET@ "$0" | tar -xz -C "$PREFIX"
+if [ ! -x "$DATA/json-gl-xr.AppImage" ]; then
+    echo "extraction failed" >&2
+    exit 1
+fi
+
+# wrapper: the top-level command. SteamOS ships fuse3; without any fuse at all
+# the type2 runtime exits 127, in which case we let it extract itself instead.
+cat > "$BIN/json-gl-xr" <<'EOF'
+#!/bin/sh
+HERE=$(dirname "$(readlink -f "$0")")
+APP=$(dirname "$HERE")/share/json-gl-xr/json-gl-xr.AppImage
+
+if [ ! -e /dev/fuse ]; then
+    APPIMAGE_EXTRACT_AND_RUN=1
+    export APPIMAGE_EXTRACT_AND_RUN
+    exec "$APP" "$@"
+fi
+
+"$APP" "$@"
+rc=$?
+if [ "$rc" -eq 127 ] && [ "${APPIMAGE_EXTRACT_AND_RUN:-0}" != 1 ]; then
+    APPIMAGE_EXTRACT_AND_RUN=1
+    export APPIMAGE_EXTRACT_AND_RUN
+    exec "$APP" "$@"
+fi
+exit "$rc"
+EOF
+
+# wrapper: the example document that came with the release
+cat > "$BIN/json-gl-xr-example" <<'EOF'
+#!/bin/sh
+HERE=$(dirname "$(readlink -f "$0")")
+PREFIX=$(dirname "$HERE")
+exec "$PREFIX/bin/json-gl-xr" --in-file "$PREFIX/share/json-gl-xr/example.json" "$@"
+EOF
+chmod 755 "$BIN/json-gl-xr" "$BIN/json-gl-xr-example"
+
+# desktop entry, so it shows up in the application menu in desktop mode
+cat > "$DESKTOP" <<EOF
+[Desktop Entry]
+Type=Application
+Name=JSON in dark space (XR)
+Comment=Walk a JSON document as a graph in VR
+Exec=$BIN/json-gl-xr-example
+Icon=json-gl-xr
+Categories=Development;Graphics;
+Terminal=true
+EOF
+
+echo "installed json-gl-xr in $PREFIX"
+echo
+echo "  $BIN/json-gl-xr-example            # the bundled example, OpenXR"
+echo "  $BIN/json-gl-xr-example --desktop  # same, in a window"
+echo "  $BIN/json-gl-xr --in-file FILE     # any other document"
+echo
+case ":$PATH:" in
+    *":$BIN:"*) ;;
+    *)
+        echo "add $BIN to your PATH to use the bare names:"
+        echo "    export PATH=\"$BIN:\$PATH\""
+        ;;
+esac
+
+# stop here: the payload below is not shell code
+exit 0
+
+# payload (gzipped tar) follows this line

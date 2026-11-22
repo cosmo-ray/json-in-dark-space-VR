@@ -93,9 +93,27 @@ The AppImage is the deliverable; there is no toolchain on the Steam Frame.
 make appimage          # macOS / docker
 make appimage-native   # aarch64 Linux, no docker
 # -> dist/json-gl-xr-aarch64.AppImage
+# -> dist/json-gl-xr-aarch64-installer.sh
 ```
 
-Copy it to the devkit and run it. If the runtime does not expose
+Copy the two files to the devkit and install without root:
+
+```sh
+sh json-gl-xr-aarch64-installer.sh   # -> ~/.local, PREFIX/--prefix to change
+json-gl-xr-example                   # the bundled example, OpenXR
+json-gl-xr-example --desktop         # same, in a window
+```
+
+The installer writes `~/.local/bin/json-gl-xr` (a wrapper around the AppImage),
+`~/.local/bin/json-gl-xr-example` (the same with `--in-file example.json`), the
+example and the icon under `~/.local/share`, plus a desktop entry.
+`--force` replaces an existing install, `--uninstall` removes it; the wrapper
+extracts the AppImage itself when the host has no usable FUSE.
+
+Without installing: `chmod +x json-gl-xr-aarch64.AppImage` and run
+`./json-gl-xr-aarch64.AppImage --in-file example.json`.
+
+If the runtime does not expose
 `XR_KHR_opengl_es_enable` the binary prints a warning and falls back to
 `--desktop`; use `--list-xr-extensions` to see the available bindings. SteamVR
 on Linux is Vulkan-first, so GLES support is the known risk here — that is what
@@ -116,7 +134,7 @@ match the last commit.
 | `json_layout.h`      | layout, cube mesh and picking shared by both    |
 | `third_party/`       | submodules: yyjson, stb, csonpath               |
 | `.gitmodules`        | HTTPS urls; each dependency is pinned by commit |
-| `packaging/`         | arm64 build image and AppImage script           |
+| `packaging/`         | build image, AppImage + installer scripts       |
 | `.github/workflows/` | nightly build + rolling `nightly` release       |
 | `example.json`       | sample data (36 elements)                       |
 
