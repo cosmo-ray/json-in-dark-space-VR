@@ -77,6 +77,7 @@ make appimage-native   # same packaging script, no docker
 ./json-gl-xr --in-file example.json --main-path '$.items'
 ./json-gl-xr --desktop --in-file example.json # side-by-side stereo in a window
 ./json-gl-xr --list-xr-extensions             # what the runtime offers
+./json-gl-xr-doctor                           # why OpenXR does not work
 ```
 
 Same input rules as `json-gl`: `--in-file FILE` or JSON on stdin, `--main-path`
@@ -100,24 +101,45 @@ Copy the two files to the devkit and install without root:
 
 ```sh
 sh json-gl-xr-aarch64-installer.sh   # -> ~/.local, PREFIX/--prefix to change
+json-gl-xr-doctor                    # first: is OpenXR usable here?
 json-gl-xr-example                   # the bundled example, OpenXR
 json-gl-xr-example --desktop         # same, in a window
 ```
 
+OpenXR requires a **running runtime**, not just the loader. On the Steam Frame
+start SteamVR first; the `nightly` AppImage does not ship an OpenXR loader, so
+the one from SteamOS/SteamVR is used. If nothing is found, point
+`XR_RUNTIME_JSON` at the runtime manifest, for example
+`XR_RUNTIME_JSON=~/.steam/steam/steamapps/common/SteamVR/steamxr_linux64.json`.
+
+`json-gl-xr-doctor` links neither OpenXR nor GLES and uses `dlopen`, so it runs
+even when the loader or runtime is missing. It prints the loader path and
+version, the environment (`XR_RUNTIME_JSON`, `DISPLAY`, `WAYLAND_DISPLAY`), the
+manifests that were searched with their `library_path`, the EGL/GLES state, and
+a final `result:` line naming the `XrResult` code when the runtime cannot be
+reached.
+
 The installer writes `~/.local/bin/json-gl-xr` (a wrapper around the AppImage),
-`~/.local/bin/json-gl-xr-example` (the same with `--in-file example.json`), the
-example and the icon under `~/.local/share`, plus a desktop entry.
+`~/.local/bin/json-gl-xr-example` (the same with `--in-file example.json`),
+`~/.local/bin/json-gl-xr-doctor`, the example and the icon under
+`~/.local/share`, plus a desktop entry.
 `--force` replaces an existing install, `--uninstall` removes it; the wrapper
 extracts the AppImage itself when the host has no usable FUSE.
 
 Without installing: `chmod +x json-gl-xr-aarch64.AppImage` and run
 `./json-gl-xr-aarch64.AppImage --in-file example.json`.
 
-If the runtime does not expose
-`XR_KHR_opengl_es_enable` the binary prints a warning and falls back to
-`--desktop`; use `--list-xr-extensions` to see the available bindings. SteamVR
-on Linux is Vulkan-first, so GLES support is the known risk here — that is what
-the compile-time backend switch exists for.
+If no runtime can be reached the binary says so (and suggests starting SteamVR
+or setting `XR_RUNTIME_JSON`); if a runtime is reachable but does not expose
+`XR_KHR_opengl_es_enable` it says that instead. Both fall back to `--desktop`;
+use `--list-xr-extensions` to see the available bindings. SteamVR on Linux is
+Vulkan-first, so GLES support is the known risk here — that is what the
+compile-time backend switch exists for.
+
+`--desktop` asks GLFW for a GLES 3.2 context through EGL. The GLFW in the build
+image is 3.3, which is X11-only on Linux: run it under XWayland when KDE uses
+Wayland, or use `--desktop` only on an X11 session. Failures now print the
+actual `glfwGetError()` message instead of a hard-coded one.
 
 Every push is built by `.github/workflows/nightly.yml` on an arm64 runner and
 the AppImage is run under Xvfb. Pushes to `main` replace the
@@ -131,6 +153,8 @@ match the last commit.
 | -------------------- | ----------------------------------------------- |
 | `gl-cube-2.c`        | legacy GLUT front-end                           |
 | `vr.c`               | OpenXR / GLES front-end                         |
+| `xr_result.h`        | `XrResult` names without a live instance        |
+| `doctor.c`           | `json-gl-xr-doctor`, dlopen-based diagnostics   |
 | `json_layout.h`      | layout, cube mesh and picking shared by both    |
 | `third_party/`       | submodules: yyjson, stb, csonpath               |
 | `.gitmodules`        | HTTPS urls; each dependency is pinned by commit |

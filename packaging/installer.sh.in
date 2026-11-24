@@ -63,7 +63,8 @@ DESKTOP=$PREFIX/share/applications/json-gl-xr.desktop
 ICON=$PREFIX/share/icons/hicolor/256x256/apps/json-gl-xr.png
 
 if [ "$UNINSTALL" = 1 ]; then
-    rm -f "$BIN/json-gl-xr" "$BIN/json-gl-xr-example" "$DESKTOP" "$ICON"
+    rm -f "$BIN/json-gl-xr" "$BIN/json-gl-xr-example" "$BIN/json-gl-xr-doctor" \
+          "$DESKTOP" "$ICON"
     rm -rf "$DATA"
     echo "removed json-gl-xr from $PREFIX"
     exit 0
@@ -132,6 +133,7 @@ echo
 echo "  $BIN/json-gl-xr-example            # the bundled example, OpenXR"
 echo "  $BIN/json-gl-xr-example --desktop  # same, in a window"
 echo "  $BIN/json-gl-xr --in-file FILE     # any other document"
+echo "  $BIN/json-gl-xr-doctor             # why OpenXR does not work"
 echo
 case ":$PATH:" in
     *":$BIN:"*) ;;

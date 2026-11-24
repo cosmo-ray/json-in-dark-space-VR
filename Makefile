@@ -30,15 +30,18 @@ $(SUBMODULES):
 # OpenXR / OpenGL ES 3.2 renderer
 #
 #   make vr                      native build (needs glfw3, EGL, GLES3, OpenXR)
+#   make doctor                  diagnostic tool (no OpenXR/GLES link, dlopen)
 #   make vr API=API_VK           same file, Vulkan backend (not implemented)
 #   make vr-linux                aarch64 Linux build inside docker (arm64 native)
 #   make appimage                dist/json-gl-xr-aarch64.AppImage (+ installer)
 # ---------------------------------------------------------------------------
 API ?= API_GLES
 XR_BIN := json-gl-xr
+DOCTOR_BIN := json-gl-xr-doctor
+DOCTOR_LIBS := $(if $(filter Darwin,$(shell uname -s)),,-ldl)
 
 VR_SRC  := vr.c third_party/yyjson/src/yyjson.c
-VR_DEPS := $(SUBMODULES) vr.c json_layout.h \
+VR_DEPS := $(SUBMODULES) vr.c json_layout.h xr_result.h \
            third_party/yyjson/src/yyjson.c third_party/csonpath/csonpath_yyjson.h
 VR_CFLAGS := -O2 -g -std=gnu11 -Wall -Wextra -Wno-unused-parameter \
              -Wno-unused-function -Wno-missing-field-initializers \
@@ -49,6 +52,11 @@ VR_LIBS := $(shell pkg-config --cflags --libs glfw3 2>/dev/null) -lEGL -lGLESv2 
 vr: $(VR_DEPS)
 	$(CC) $(VR_CFLAGS) $(VR_SRC) -o $(XR_BIN) $(VR_LIBS)
 
+# same information as --list-xr-extensions, but it does not need a loader at
+# start-up, so it can still explain why nothing works
+doctor: doctor.c xr_result.h
+	$(CC) -O2 -g -std=gnu11 -Wall -Wextra doctor.c -o $(DOCTOR_BIN) $(DOCTOR_LIBS)
+
 DOCKER_IMG := json-gl-xr-build
 
 docker-image:
@@ -56,19 +64,19 @@ docker-image:
 
 vr-linux: $(VR_DEPS) docker-image
 	docker run --rm -v "$(CURDIR)":/src -w /src $(DOCKER_IMG) \
-		make vr API=$(API)
+		make vr doctor API=$(API)
 
 appimage: vr-linux
 	docker run --rm -v "$(CURDIR)":/src -w /src $(DOCKER_IMG) sh packaging/appimage.sh
 
 # same script, no docker: for an aarch64 Linux host and for CI
-appimage-native: vr
+appimage-native: vr doctor
 	sh packaging/appimage.sh
 
 deploy: appimage
 	@echo "copy dist/json-gl-xr-aarch64.AppImage to the Steam Frame (devkit or scp)"
 
 clean:
-	rm -rf json-gl json-gl-xr json-gl.dSYM build/AppDir dist
+	rm -rf json-gl json-gl-xr json-gl-xr-doctor json-gl.dSYM build/AppDir dist
 
-.PHONY: deps json-gl vr vr-linux docker-image appimage appimage-native deploy clean
+.PHONY: deps json-gl vr doctor vr-linux docker-image appimage appimage-native deploy clean

@@ -1,6 +1,7 @@
 # build output
 json-gl
 json-gl-xr
+json-gl-xr-doctor
 json-gl.dSYM/
 build/
 dist/

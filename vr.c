@@ -55,6 +55,7 @@
 #include "csonpath_yyjson.h"
 #include "json_layout.h"
 #include "stb_easy_font.h"
+#include "xr_result.h"
 
 /*
  * The Khronos header only declares XrGraphicsBindingOpenGLESAndroidKHR when
@@ -920,7 +921,9 @@ static void write_ppm(const char *path, int w, int h)
 static void run_desktop(struct app *a, int width, int height)
 {
     if (!glfwInit()) {
-        fprintf(stderr, "glfwInit failed\n");
+        const char *err = NULL;
+        glfwGetError(&err);
+        fprintf(stderr, "glfwInit failed: %s\n", err ? err : "unknown error");
         exit(1);
     }
     glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
@@ -931,7 +934,10 @@ static void run_desktop(struct app *a, int width, int height)
 
     GLFWwindow *win = glfwCreateWindow(width, height, "json-gl-xr  [SBS]", NULL, NULL);
     if (!win) {
-        fprintf(stderr, "cannot create a GLES 3.2 window: %s\n", "egl/x11");
+        const char *err = NULL;
+        glfwGetError(&err);
+        fprintf(stderr, "cannot create a GLES 3.2 window: %s\n",
+                err ? err : "unknown GLFW error");
         glfwTerminate();
         exit(1);
     }
@@ -1063,9 +1069,8 @@ static void run_desktop(struct app *a, int width, int height)
 #define XR_CHECK(x) do {                                                   \
         XrResult _r = (x);                                                 \
         if (XR_FAILED(_r)) {                                               \
-            char _buf[XR_MAX_RESULT_STRING_SIZE];                          \
-            xrResultToString(g_xr.instance, _r, _buf);                     \
-            fprintf(stderr, "%s:%d  %s -> %s\n", __FILE__, __LINE__, #x, _buf); \
+            fprintf(stderr, "%s:%d  %s -> %s\n", __FILE__, __LINE__, #x,    \
+                    xr_result_name(_r));                                   \
             exit(1);                                                       \
         }                                                                  \
     } while (0)
@@ -1128,9 +1133,38 @@ static int xr_has_extension(const char *name)
     return found;
 }
 
+/* 1 when a runtime is reachable and can do GLES; otherwise says why not */
+static int xr_probe(void)
+{
+    uint32_t n = 0;
+    XrResult r = xrEnumerateInstanceExtensionProperties(NULL, 0, &n, NULL);
+    if (XR_FAILED(r)) {
+        fprintf(stderr,
+                "cannot reach an OpenXR runtime: %s\n"
+                "start SteamVR (or the runtime of your headset) first, or set\n"
+                "XR_RUNTIME_JSON to its manifest; json-gl-xr-doctor prints what\n"
+                "was searched.\n", xr_result_name(r));
+        return 0;
+    }
+    if (!xr_has_extension(XR_KHR_OPENGL_ES_ENABLE_EXTENSION_NAME)) {
+        fprintf(stderr,
+                "this OpenXR runtime does not expose %s\n"
+                "(run --list-xr-extensions to see what it does expose)\n",
+                XR_KHR_OPENGL_ES_ENABLE_EXTENSION_NAME);
+        return 0;
+    }
+    return 1;
+}
+
 static void xr_print_extensions(void)
 {
     uint32_t n = 0;
+    XrResult r = xrEnumerateInstanceExtensionProperties(NULL, 0, &n, NULL);
+    if (XR_FAILED(r)) {
+        printf("no reachable OpenXR runtime: %s\n", xr_result_name(r));
+        printf("try json-gl-xr-doctor: it prints the manifests that were searched\n");
+        return;
+    }
     XrExtensionProperties *p = xr_extensions(&n);
     if (!p) {
         printf("no OpenXR runtime found\n");
@@ -1697,10 +1731,8 @@ int main(int argc, char **argv)
                      preselect, a.scene.n ? a.scene.n - 1 : 0);
     }
 
-    if (!desktop && !xr_has_extension(XR_KHR_OPENGL_ES_ENABLE_EXTENSION_NAME)) {
-        fprintf(stderr,
-                "no OpenXR runtime with XR_KHR_opengl_es_enable, "
-                "falling back to --desktop\n");
+    if (!desktop && !xr_probe()) {
+        fprintf(stderr, "falling back to --desktop\n");
         desktop = 1;
     }
     a.desktop = desktop;

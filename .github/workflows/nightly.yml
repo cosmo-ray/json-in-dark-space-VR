@@ -34,6 +34,13 @@ jobs:
       - name: build the AppImage
         run: make appimage-native
 
+      - name: run the diagnostic
+        run: |
+          # no OpenXR runtime here: the doctor must still work and say so
+          # cleanly, because it uses dlopen() instead of linking the loader
+          ./json-gl-xr-doctor | tee /tmp/doctor.txt
+          grep -Eq '^result: (no reachable OpenXR runtime|no OpenXR loader)' /tmp/doctor.txt
+
       - name: install from the self-extracting installer
         run: |
           sh dist/json-gl-xr-aarch64-installer.sh --prefix "$PWD/build/inst"
@@ -104,6 +111,7 @@ jobs:
             echo
             echo '```sh'
             echo "sh json-gl-xr-aarch64-installer.sh   # -> ~/.local/bin"
+            echo "json-gl-xr-doctor                    # is OpenXR usable here?"
             echo "json-gl-xr-example                   # the bundled example, OpenXR"
             echo "json-gl-xr-example --desktop         # same, in a window"
             echo '```'
